@@ -14,14 +14,13 @@ mod generation;
 
 use crate::base_renderable::CanCreateMesh;
 use crate::chunk::{Chunk, NeedsGenerated};
-use crate::generation::chunk_generator::ChunkGeneratorPlugin;
-use bevy::ecs::component::{ComponentId, ComponentInfo};
+use crate::generation::chunk_generator;
+use bevy::ecs::component::ComponentInfo;
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy_inspector_egui::WorldInspectorPlugin;
 use std::ops::Mul;
 
-/// This example shows various ways to configure texture materials in 3D
 fn main()
 {
     let mut app = App::new();
@@ -30,7 +29,7 @@ fn main()
         .add_system(camera_movement_system)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(chunk_mesh_updater::ChunkMeshUpdaterPlugin)
-        .add_plugin(ChunkGeneratorPlugin)
+        .add_plugin(chunk_generator::ChunkGeneratorPlugin)
         .run();
 }
 
@@ -75,9 +74,6 @@ fn setup(
 )
 {
     let texture_handle = asset_server.load("block.png");
-
-    // let chunk = Chunk::new(0, 0, 0);
-    // let chunk2 = Chunk::new(-16, 0, 0);
 
     let material_handle = materials.add(StandardMaterial {
         base_color_texture: Some(texture_handle.clone()),

@@ -18,7 +18,7 @@ pub struct NeedsGenerated;
 pub struct Chunk
 {
     blocks: [block::BlockID; (WIDTH * HEIGHT * LENGTH) as usize],
-    neighbors: [Option<Box<Chunk>>; 6],
+    neighbors: [Option<Box<Chunk>>; 6], // does nothing yet
 
     pub x: i32,
     pub y: i32,
@@ -37,7 +37,7 @@ impl Chunk
     {
         Chunk {
             blocks: [blocks::BLOCK_AIR.id; (WIDTH * HEIGHT * LENGTH) as usize],
-            neighbors: [None, None, None, None, None, None],
+            neighbors: [None, None, None, None, None, None], // does nothing yet
             x,
             y,
             z,
@@ -94,12 +94,9 @@ impl Chunk
     {
         let mut ent = commands.entity(entity);
 
-        // Prevents duplicate "Dirty" components from being added
-        ent.remove::<Dirty>();
-
         if self.blocks[flatten(x, y, z)] != new_block.id
         {
-            ent.insert(Dirty {});
+            ent.insert(Dirty {}); // I **think** this doesn't allow for duplicates
         }
 
         self.blocks[flatten(x, y, z)] = new_block.id;
