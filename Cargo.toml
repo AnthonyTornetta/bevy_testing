@@ -1,0 +1,17 @@
+[package]
+name = "learn_rust"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[workspace]
+members = []
+
+[dependencies]
+bevy = "0.6.1"
+bevy-inspector-egui = "0.8.2"
+lazy_static = "1.4.0"
+rand = "0.8.5"
+noise = "0.7.0"
+bevy_rapier3d = "0.12.1"
