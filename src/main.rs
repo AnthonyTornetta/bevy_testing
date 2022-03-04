@@ -3,6 +3,7 @@ extern crate lazy_static;
 
 mod blocks;
 mod chunk;
+mod structure;
 
 mod base_renderable;
 mod block_renderer;
@@ -15,6 +16,7 @@ mod generation;
 use crate::base_renderable::CanCreateMesh;
 use crate::chunk::{Chunk, NeedsGenerated};
 use crate::generation::chunk_generator;
+use crate::structure::structure::Structure;
 use bevy::ecs::component::ComponentInfo;
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
@@ -82,25 +84,34 @@ fn setup(
         ..Default::default()
     });
 
+    let mut entities: Vec<Entity> = vec![];
+
     for z in -16..0
     {
         for x in 0..16
         {
             let chunk = Chunk::new(x * 16, 0, z * 16);
-            commands
-                .spawn_bundle(PbrBundle {
-                    mesh: meshes.add(chunk.create_mesh()),
-                    material: material_handle.clone(),
-                    transform: Transform {
-                        translation: Vec3::new(x as f32 * 16.0, 0.0, z as f32 * 16.0),
+            entities.push(
+                commands
+                    .spawn_bundle(PbrBundle {
+                        mesh: meshes.add(chunk.create_mesh()),
+                        material: material_handle.clone(),
+                        transform: Transform {
+                            translation: Vec3::new(x as f32 * 16.0, 0.0, z as f32 * 16.0),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
-                })
-                .insert(chunk)
-                .insert(NeedsGenerated {});
+                    })
+                    .insert(chunk)
+                    .insert(NeedsGenerated {})
+                    .id(),
+            );
         }
     }
+
+    let mut s_entity = commands.spawn();
+    s_entity.insert(Structure {});
+    s_entity.push_children(&entities);
 
     // commands.spawn_bundle(PbrBundle {
     //     mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
