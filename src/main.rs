@@ -20,13 +20,23 @@ use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy_inspector_egui::WorldInspectorPlugin;
 use std::ops::Mul;
+use bevy_rapier3d::prelude::*;
+use rand::random;
+use crate::KeyCode::D;
 
 fn main()
 {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins)
         .add_startup_system(setup)
+        // .add_system(print_heights)
         .add_system(camera_movement_system)
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .insert_resource(RapierConfiguration
+        {
+            gravity: vector![0.0,0.0,0.0],
+            ..Default::default()
+        })
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(chunk_mesh_updater::ChunkMeshUpdaterPlugin)
         .add_plugin(chunk_generator::ChunkGeneratorPlugin)
@@ -82,23 +92,47 @@ fn setup(
         ..Default::default()
     });
 
-    for z in -16..0
+    for z in -4..0
     {
-        for x in 0..16
+        for x in 0..4
         {
             let chunk = Chunk::new(x * 16, 0, z * 16);
+
+            let xf: f32 = x as f32 * 16.0;
+            let yf: f32 = 0.0;
+            let zf: f32 = z as f32 * 16.0;
+
             commands
                 .spawn_bundle(PbrBundle {
                     mesh: meshes.add(chunk.create_mesh()),
                     material: material_handle.clone(),
                     transform: Transform {
-                        translation: Vec3::new(x as f32 * 16.0, 0.0, z as f32 * 16.0),
+                        translation: Vec3::new(xf, yf, zf),
                         ..Default::default()
                     },
                     ..Default::default()
                 })
                 .insert(chunk)
-                .insert(NeedsGenerated {});
+                .insert(NeedsGenerated {})
+                .insert_bundle(RigidBodyBundle {
+                    position: [xf, yf, zf].into(),
+                    velocity: RigidBodyVelocity {
+                        linvel: [rand::random::<f32>() * 6.0 - 3.0,
+                            rand::random::<f32>() * 6.0 - 3.0,
+                            rand::random::<f32>() * 6.0 - 3.0].into(),
+                        angvel: [0.0, 0.0, 0.0].into()
+                    }.into(),
+                    ..Default::default()
+                })
+                .insert_bundle(ColliderBundle {
+                    shape: ColliderShape::cuboid(8.0, 8.0, 8.0).into(),
+                    collider_type: ColliderType::Solid.into(),
+                    // position: [xf, yf, zf].into(),
+                    material: ColliderMaterial { friction: 0.7, restitution: 0.3, ..Default::default() }.into(),
+                    mass_properties: ColliderMassProps::Density(2.0).into(),
+                    ..Default::default()
+                })
+                .insert(ColliderPositionSync::Discrete); // Updates Bevy's transform w/ rapier's transform
         }
     }
 
