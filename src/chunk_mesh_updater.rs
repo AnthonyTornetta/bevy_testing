@@ -79,8 +79,6 @@ fn check_chunks(
 {
     for (entity, chunk, handle, aabb, _) in query.iter_mut()
     {
-        println!("Checked a chunk!");
-
         let mesh = chunk.create_mesh();
 
         let _ = meshes.set(handle, mesh);
