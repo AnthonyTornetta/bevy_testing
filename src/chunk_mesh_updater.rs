@@ -8,7 +8,7 @@ use bevy_rapier3d::prelude::*;
 
 pub struct ChunkMeshUpdaterPlugin;
 
-fn add_collider(count: u16, colliders: &mut Vec<(Isometry<Real>, SharedShape)>)
+fn add_collider(start_x: f32, start_y: f32, start_z: f32, count: u16, colliders: &mut Vec<(Isometry<Real>, SharedShape)>)
 {
     let length_size = LENGTH * HEIGHT;
     let height_size = HEIGHT;
@@ -55,7 +55,7 @@ fn create_colliders(chunk: &Chunk) -> Vec<(Isometry<Real>, SharedShape)>
                 }
                 else if count != 0
                 {
-                    add_collider(count, &mut colliders);
+                    add_collider(start_x, start_y, start_z, count, &mut colliders);
 
                     count = 0;
                 }
@@ -65,7 +65,7 @@ fn create_colliders(chunk: &Chunk) -> Vec<(Isometry<Real>, SharedShape)>
 
     if count != 0
     {
-        add_collider(count, &mut colliders);
+        add_collider(start_x, start_y, start_z, count, &mut colliders);
     }
 
     colliders
