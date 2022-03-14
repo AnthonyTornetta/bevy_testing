@@ -13,7 +13,7 @@ mod epic_plugin;
 mod generation;
 
 use crate::base_renderable::CanCreateMesh;
-use crate::chunk::{Chunk, NeedsGenerated};
+use crate::chunk::{Chunk, HEIGHT, LENGTH, NeedsGenerated, WIDTH};
 use crate::generation::chunk_generator;
 use bevy::ecs::component::ComponentInfo;
 use bevy::input::mouse::MouseMotion;
@@ -23,6 +23,7 @@ use std::ops::Mul;
 use bevy_rapier3d::prelude::*;
 use rand::random;
 use crate::KeyCode::D;
+use crate::nalgebra::Isometry3;
 
 fn main()
 {
@@ -75,6 +76,151 @@ pub fn camera_movement_system(
         (keys.pressed(KeyCode::S) as i32 - keys.pressed(KeyCode::W) as i32) as f32 * speed;
 }
 
+fn create_colliders(chunk: &Chunk) -> Vec<(Isometry<Real>, SharedShape)>
+{
+    let mut colliders: Vec<(Isometry<Real>, SharedShape)> = Vec::new();
+
+    // let mut b_width = 0;
+    // let mut b_height = 0;
+    // let mut b_length = 0;
+
+    let mut start_x: f32 = 0.0;
+    let mut start_y: f32 = 0.0;
+    let mut start_z: f32 = 0.0;
+
+    let mut count: u16 = 0;
+
+    for z in 0..LENGTH
+    {
+        for y in 0..HEIGHT
+        {
+            for x in 0..WIDTH
+            {
+                if chunk.has_block_u16(x, y, z)
+                {
+                    if count == 0
+                    {
+                        start_x = x as f32 - WIDTH as f32 / 2.0;
+                        start_y = y as f32 - HEIGHT as f32 / 2.0;
+                        start_z = z as f32 - LENGTH as f32 / 2.0;
+                    }
+                    count += 1;
+                }
+                else if count != 0
+                {
+                    // make collider
+                    let length = 1 + count / (LENGTH * HEIGHT);
+                    let height = 1 + (count - length * count) / HEIGHT;
+                    let width = 1 + count - count * height - count * length;
+
+                    let hw = width as f32 / 2.0;
+                    let hh = height as f32 / 2.0;
+                    let hl = length as f32 / 2.0;
+
+                    colliders.push(
+                        (Isometry::translation(start_x + hw, start_y + hh, start_z + hl),
+                         ColliderShape::cuboid(hw, hh, hl)));
+
+                    count = 0;
+                }
+            }
+        }
+    }
+
+    if count != 0
+    {
+        // make collider
+        let length = 1 + count / (LENGTH * HEIGHT);
+        let height = 1 + (count - length * count) / HEIGHT;
+        let width = 1 + count - count * height - count * length;
+
+        let hw = width as f32 / 2.0;
+        let hh = height as f32 / 2.0;
+        let hl = length as f32 / 2.0;
+
+        colliders.push(
+            (Isometry::translation(start_x + hw, start_y + hh, start_z + hl),
+             ColliderShape::cuboid(hw, hh, hl)));
+
+        count = 0;
+    }
+
+        // let mut z = 0;
+    // let mut y = 0;
+    // let mut x = 0;
+    //
+    // while z < LENGTH
+    // {
+    //     while y < HEIGHT
+    //     {
+    //         while x < WIDTH
+    //         {
+    //             if chunk.has_block_u16(x, y, z)
+    //             {
+    //                 let xx = x as f32 - WIDTH as f32 / 2.0;
+    //                 let yy = y as f32 - HEIGHT as f32 / 2.0;
+    //                 let zz = z as f32 - LENGTH as f32 / 2.0;
+    //
+    //                 // colliders.push(
+    //                 //     (Isometry::translation(xx, yy, zz),
+    //                 //      ColliderShape::cuboid(0.5, 0.5, 0.5)));
+    //
+    //                 if b_width == 0
+    //                 {
+    //                     start_x = xx;
+    //                     start_y = yy;
+    //                     start_z = zz;
+    //
+    //                     b_width = 1;
+    //                     b_height = 1;
+    //                     b_length = 1;
+    //                 }
+    //             }
+    //             else if b_width != 0
+    //             {
+    //                 if b_height != 1
+    //                 {
+    //                     x = -1;
+    //                     y -= 1;
+    //
+    //                     let hw = b_width as f32 / 2.0;
+    //                     let hh = b_height as f32 / 2.0;
+    //                     let hl = b_length as f32 / 2.0;
+    //
+    //                     colliders.push(
+    //                         (Isometry::translation(start_x + hw, start_h + hh, start_z + hl),
+    //                          ColliderShape::cuboid(hw, hh, hl)));
+    //
+    //                     b_width = 0;
+    //                     b_height = 0;
+    //                     b_length = 0;
+    //                 }
+    //                 else
+    //                 {
+    //                     let hw = b_width as f32 / 2.0;
+    //
+    //                     colliders.push(
+    //                         (Isometry::translation(start_x + hw, start_h + 0.5, start_z + 0.5),
+    //                          ColliderShape::cuboid(hw, 0.5, 0.5)));
+    //
+    //                     b_width = 0;
+    //                     b_height = 0;
+    //                     b_length = 0;
+    //                 }
+    //             }
+    //
+    //             x += 1;
+    //         }
+    //
+    //         y += 1;
+    //     }
+    //
+    //     z += 1;
+    // }
+
+    colliders
+}
+
 /// sets up a scene with textured entities
 fn setup(
     mut commands: Commands,
@@ -122,14 +268,6 @@ fn setup(
                             rand::random::<f32>() * 6.0 - 3.0].into(),
                         angvel: [0.0, 0.0, 0.0].into()
                     }.into(),
-                    ..Default::default()
-                })
-                .insert_bundle(ColliderBundle {
-                    shape: ColliderShape::cuboid(8.0, 8.0, 8.0).into(),
-                    collider_type: ColliderType::Solid.into(),
-                    // position: [xf, yf, zf].into(),
-                    material: ColliderMaterial { friction: 0.7, restitution: 0.3, ..Default::default() }.into(),
-                    mass_properties: ColliderMassProps::Density(2.0).into(),
                     ..Default::default()
                 })
                 .insert(ColliderPositionSync::Discrete); // Updates Bevy's transform w/ rapier's transform
