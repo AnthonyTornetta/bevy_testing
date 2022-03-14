@@ -8,6 +8,24 @@ use bevy_rapier3d::prelude::*;
 
 pub struct ChunkMeshUpdaterPlugin;
 
+fn add_collider(count: u16, colliders: &mut Vec<(Isometry<Real>, SharedShape)>)
+{
+    let length_size = LENGTH * HEIGHT;
+    let height_size = HEIGHT;
+
+    // make collider
+    let length = count / (length_size);
+    let height = (count - length * length_size) / height_size;
+    let width = count - height_size * height - length_size * length;
+
+    let hw = (width + 1) as f32 / 2.0;
+    let hh = (height + 1) as f32 / 2.0;
+    let hl = (length + 1) as f32 / 2.0;
+
+    colliders.push(
+        (Isometry::translation(start_x + hw, start_y + hh, start_z + hl),
+         ColliderShape::cuboid(hw, hh, hl)));
+}
 
 fn create_colliders(chunk: &Chunk) -> Vec<(Isometry<Real>, SharedShape)>
 {
@@ -37,21 +55,7 @@ fn create_colliders(chunk: &Chunk) -> Vec<(Isometry<Real>, SharedShape)>
                 }
                 else if count != 0
                 {
-                    let length_size = LENGTH * HEIGHT;
-                    let height_size = HEIGHT;
-
-                    // make collider
-                    let length = count / (length_size);
-                    let height = (count - length * length_size) / height_size;
-                    let width = count - height_size * height - length_size * length;
-
-                    let hw = (width + 1) as f32 / 2.0;
-                    let hh = (height + 1) as f32 / 2.0;
-                    let hl = (length + 1) as f32 / 2.0;
-
-                    colliders.push(
-                        (Isometry::translation(start_x + hw, start_y + hh, start_z + hl),
-                         ColliderShape::cuboid(hw, hh, hl)));
+                    add_collider(count, &mut colliders);
 
                     count = 0;
                 }
@@ -61,20 +65,7 @@ fn create_colliders(chunk: &Chunk) -> Vec<(Isometry<Real>, SharedShape)>
 
     if count != 0
     {
-        // make collider
-        let length = 1 + count / (LENGTH * HEIGHT);
-        let height = 1 + (count - length * count) / HEIGHT;
-        let width = 1 + count - count * height - count * length;
-
-        let hw = width as f32 / 2.0;
-        let hh = height as f32 / 2.0;
-        let hl = length as f32 / 2.0;
-
-        colliders.push(
-            (Isometry::translation(start_x + hw, start_y + hh, start_z + hl),
-             ColliderShape::cuboid(hw, hh, hl)));
-
-        count = 0;
+        add_collider(count, &mut colliders);
     }
 
     colliders
