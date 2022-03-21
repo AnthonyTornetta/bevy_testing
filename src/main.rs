@@ -14,7 +14,7 @@ mod epic_plugin;
 mod generation;
 
 use crate::base_renderable::CanCreateMesh;
-use crate::chunk::{Chunk, NeedsGenerated};
+use crate::chunk::{Chunk, HEIGHT, LENGTH, NeedsGenerated, WIDTH};
 use crate::generation::chunk_generator;
 use crate::structure::structure::Structure;
 use bevy::ecs::component::ComponentInfo;
@@ -22,13 +22,24 @@ use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy_inspector_egui::WorldInspectorPlugin;
 use std::ops::Mul;
+use bevy_rapier3d::prelude::*;
+use rand::random;
+use crate::KeyCode::D;
+use crate::nalgebra::Isometry3;
 
 fn main()
 {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins)
         .add_startup_system(setup)
+        // .add_system(print_heights)
         .add_system(camera_movement_system)
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .insert_resource(RapierConfiguration
+        {
+            gravity: vector![0.0,0.0,0.0],
+            ..Default::default()
+        })
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(chunk_mesh_updater::ChunkMeshUpdaterPlugin)
         .add_plugin(chunk_generator::ChunkGeneratorPlugin)
@@ -84,41 +95,41 @@ fn setup(
         ..Default::default()
     });
 
-    let mut entities: Vec<Entity> = vec![];
-
-    for z in -16..0
+    for z in -4..0
     {
-        for x in 0..16
+        for x in 0..4
         {
             let chunk = Chunk::new(x * 16, 0, z * 16);
-            entities.push(
-                commands
-                    .spawn_bundle(PbrBundle {
-                        mesh: meshes.add(chunk.create_mesh()),
-                        material: material_handle.clone(),
-                        transform: Transform {
-                            translation: Vec3::new(x as f32 * 16.0, 0.0, z as f32 * 16.0),
-                            ..Default::default()
-                        },
+
+            let xf: f32 = x as f32 * 16.0;
+            let yf: f32 = 0.0;
+            let zf: f32 = z as f32 * 16.0;
+
+            commands
+                .spawn_bundle(PbrBundle {
+                    mesh: meshes.add(chunk.create_mesh()),
+                    material: material_handle.clone(),
+                    transform: Transform {
+                        translation: Vec3::new(xf, yf, zf),
                         ..Default::default()
-                    })
-                    .insert(chunk)
-                    .insert(NeedsGenerated {})
-                    .id(),
-            );
+                    },
+                    ..Default::default()
+                })
+                .insert(chunk)
+                .insert(NeedsGenerated {})
+                .insert_bundle(RigidBodyBundle {
+                    position: [xf, yf, zf].into(),
+                    velocity: RigidBodyVelocity {
+                        linvel: [rand::random::<f32>() * 6.0 - 3.0,
+                            rand::random::<f32>() * 6.0 - 3.0,
+                            rand::random::<f32>() * 6.0 - 3.0].into(),
+                        angvel: [0.0, 0.0, 0.0].into()
+                    }.into(),
+                    ..Default::default()
+                })
+                .insert(ColliderPositionSync::Discrete); // Updates Bevy's transform w/ rapier's transform
         }
     }
-
-    let mut s_entity = commands.spawn();
-    s_entity.insert(Structure {});
-    s_entity.push_children(&entities);
-
-    // commands.spawn_bundle(PbrBundle {
-    //     mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
-    //     transform: Transform::from_xyz(0.0, 0.0, 0.0),
-    //     material: materials.add(Color::rgb(1.0, 1.0, 1.0).into()),
-    //     ..Default::default()
-    // });
 
     commands.spawn_bundle(PointLightBundle {
         point_light: PointLight {
